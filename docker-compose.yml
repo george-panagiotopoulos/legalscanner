@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # Fossology scanner
+  fossology:
+    image: fossology/fossology:latest
+    container_name: legalscanner-fossology
+    ports:
+      - "${FOSSOLOGY_PORT:-5302}:80"
+    environment:
+      - FOSSOLOGY_DB_HOST=fossology_db
+      - FOSSOLOGY_DB_NAME=fossology
+      - FOSSOLOGY_DB_USER=fossy
+      - FOSSOLOGY_DB_PASSWORD=fossy
+    depends_on:
+      - fossology_db
+    volumes:
+      - fossology_data:/srv/fossology/repository
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/repo/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Fossology database
+  fossology_db:
+    image: postgres:13
+    container_name: legalscanner-fossology-db
+    environment:
+      - POSTGRES_DB=fossology
+      - POSTGRES_USER=fossy
+      - POSTGRES_PASSWORD=fossy
+    volumes:
+      - fossology_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fossy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Rust API (will be built locally)
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    container_name: legalscanner-api
+    ports:
+      - "${API_PORT:-5301}:8080"
+    environment:
+      - DATABASE_URL=sqlite:///data/legalscanner.db
+      - FOSSOLOGY_URL=http://fossology
+      - FOSSOLOGY_API_TOKEN=${FOSSOLOGY_API_TOKEN:-}
+      - GIT_TOKEN=${GIT_TOKEN:-}
+      - TEMP_WORKSPACE_DIR=/app/tmp/scans
+      - SERVER_PORT=8080
+      - API_KEY_SALT=${API_KEY_SALT:-legal-scanner-salt-change-in-production}
+      - RUST_LOG=${RUST_LOG:-info}
+    volumes:
+      - ./data:/data
+      - ./tmp:/app/tmp
+    depends_on:
+      - fossology
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Vue UI (will be built locally)
+  ui:
+    build:
+      context: .
+      dockerfile: docker/ui.Dockerfile
+      args:
+        - VITE_API_BASE_URL=http://localhost:${API_PORT:-5301}
+    container_name: legalscanner-ui
+    ports:
+      - "${UI_PORT:-5300}:80"
+    depends_on:
+      - api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  fossology_data:
+    driver: local
+  fossology_db_data:
+    driver: local
+  sqlite_data:
+    driver: local
+
+networks:
+  default:
+    name: legalscanner-network

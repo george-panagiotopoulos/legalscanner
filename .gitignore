@@ -1,0 +1,43 @@
+# Rust
+target/
+Cargo.lock
+*.pdb
+
+# SQLite
+*.db
+*.db-shm
+*.db-wal
+data/
+
+# Environment
+.env
+.env.local
+legalscanner-api/.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Node
+node_modules/
+dist/
+.npm
+
+# Temporary files
+tmp/
+temp/
+/volumes/
+
+# Docker volumes
+volumes/

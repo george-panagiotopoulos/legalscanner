@@ -1,0 +1,61 @@
+[package]
+name = "legalscanner-api"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# Async runtime
+tokio = { workspace = true }
+async-trait = { workspace = true }
+
+# Web framework
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Database
+sqlx = { workspace = true }
+
+# Git operations
+git2 = { workspace = true }
+
+# Docker client
+bollard = { workspace = true }
+
+# HTTP client
+reqwest = { workspace = true }
+
+# UUID
+uuid = { workspace = true }
+
+# Hashing and crypto
+argon2 = { workspace = true }
+rand = { workspace = true }
+base64 = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# Environment
+dotenvy = { workspace = true }
+
+# Time
+chrono = { workspace = true }
+
+# Regex
+regex = { workspace = true }
+
+[dev-dependencies]
+http-body-util = "0.1"
