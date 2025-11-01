@@ -38,6 +38,20 @@ services:
       timeout: 5s
       retries: 5
 
+  # Semgrep static analysis scanner
+  semgrep:
+    image: returntocorp/semgrep:latest
+    container_name: legalscanner-semgrep
+    command: ["sleep", "infinity"]  # Keep container running
+    volumes:
+      - ./tmp:/scans
+      - ./legalscanner-api/semgrep-rules:/semgrep-rules:ro  # Mount custom rules as read-only
+    healthcheck:
+      test: ["CMD", "semgrep", "--version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   # Rust API (will be built locally)
   api:
     build:
@@ -58,8 +72,10 @@ services:
     volumes:
       - ./data:/data
       - ./tmp:/app/tmp
+      - /var/run/docker.sock:/var/run/docker.sock  # Mount Docker socket
     depends_on:
       - fossology
+      - semgrep
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s

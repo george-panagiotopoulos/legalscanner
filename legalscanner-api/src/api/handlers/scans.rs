@@ -43,6 +43,8 @@ pub async fn create_scan(
             status: scan.status,
             created_at: scan.created_at,
             git_url: scan.git_url,
+            fossology_status: scan.fossology_status,
+            semgrep_status: scan.semgrep_status,
         }),
     ))
 }
@@ -60,6 +62,8 @@ pub async fn list_scans(
             status: scan.status,
             created_at: scan.created_at,
             git_url: scan.git_url,
+            fossology_status: scan.fossology_status,
+            semgrep_status: scan.semgrep_status,
         })
         .collect();
 
@@ -85,6 +89,10 @@ pub async fn get_scan(
         "created_at": scan.created_at,
         "started_at": scan.started_at,
         "completed_at": scan.completed_at,
+        "fossology_status": scan.fossology_status,
+        "semgrep_status": scan.semgrep_status,
+        "fossology_error": scan.fossology_error,
+        "semgrep_error": scan.semgrep_error,
         "summary": summary
     })))
 }
@@ -104,6 +112,17 @@ pub async fn delete_scan(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// DELETE /api/v1/scans - Delete all scans
+pub async fn delete_all_scans(
+    State(state): State<AppState>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let deleted_count = Scan::delete_all(&state.db).await?;
+
+    Ok(Json(serde_json::json!({
+        "deleted": deleted_count
+    })))
+}
+
 /// GET /api/v1/scans/:id/results - Get scan results
 pub async fn get_scan_results(
     State(state): State<AppState>,
@@ -117,9 +136,10 @@ pub async fn get_scan_results(
     // Get all results
     let results = ScanResult::find_by_scan_id(&state.db, &id).await?;
 
-    // Separate licenses and copyrights
+    // Separate licenses, copyrights, and ECC findings
     let mut licenses = Vec::new();
     let mut copyrights = Vec::new();
+    let mut ecc_findings = Vec::new();
 
     for result in results {
         if result.result_type == "license" {
@@ -145,6 +165,15 @@ pub async fn get_scan_results(
                 "holders": holders,
                 "years": years
             }));
+        } else if result.result_type == "ecc" {
+            ecc_findings.push(serde_json::json!({
+                "file_path": result.file_path,
+                "content": result.raw_data,
+                "risk_severity": result.risk_severity,
+                "source": result.ecc_source,
+                "line_number": result.ecc_line_number,
+                "check_id": result.ecc_check_id
+            }));
         }
     }
 
@@ -155,7 +184,8 @@ pub async fn get_scan_results(
         status: scan.status,
         results: serde_json::json!({
             "licenses": licenses,
-            "copyrights": copyrights
+            "copyrights": copyrights,
+            "ecc_findings": ecc_findings
         }),
     }))
 }

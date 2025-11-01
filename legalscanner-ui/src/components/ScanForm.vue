@@ -7,7 +7,7 @@
         <input
           id="gitUrl"
           v-model="gitUrl"
-          type="url"
+          type="text"
           placeholder="https://github.com/user/repo.git"
           required
           :disabled="isSubmitting"
@@ -69,8 +69,12 @@ const handleSubmit = async () => {
   error.value = null
   success.value = false
 
+  // Trim whitespace from inputs
+  const trimmedUrl = gitUrl.value.trim()
+  const trimmedToken = gitToken.value.trim()
+
   try {
-    const scan = await scansStore.createScan(gitUrl.value, gitToken.value)
+    const scan = await scansStore.createScan(trimmedUrl, trimmedToken || null)
     success.value = true
     gitUrl.value = ''
     gitToken.value = ''
@@ -113,26 +117,7 @@ label {
   color: #2c3e50;
 }
 
-input[type="url"] {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1rem;
-  transition: border-color 0.3s;
-}
-
-input[type="url"]:focus {
-  outline: none;
-  border-color: #3498db;
-}
-
-input[type="url"]:disabled,
-input[type="password"]:disabled {
-  background-color: #f5f5f5;
-  cursor: not-allowed;
-}
-
+input[type="text"],
 input[type="password"] {
   width: 100%;
   padding: 0.75rem;
@@ -140,12 +125,22 @@ input[type="password"] {
   border-radius: 4px;
   font-size: 1rem;
   transition: border-color 0.3s;
-  font-family: monospace;
 }
 
+input[type="text"]:focus,
 input[type="password"]:focus {
   outline: none;
   border-color: #3498db;
+}
+
+input[type="text"]:disabled,
+input[type="password"]:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+
+input[type="password"] {
+  font-family: monospace;
 }
 
 .optional-badge {

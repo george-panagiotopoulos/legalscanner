@@ -30,7 +30,29 @@ This document provides the architectural blueprint for the Legal Scanner project
    - Use established Vue component structure
    - Follow Rust idioms (Result types, async/await, traits)
 
-4. **When in Doubt**
+4. **File and Directory Creation Rules**
+   - **NEVER** create files or directories outside the project root (`/Users/gpanagiotopoulos/legalScanner/`)
+   - **ALWAYS** place new files in the appropriate project subdirectory:
+     - Backend code → `legalscanner-api/src/`
+     - Configuration files → `legalscanner-api/` or project root
+     - Frontend code → `legalscanner-ui/src/`
+     - Docker configs → `docker/`
+     - Data files → `data/`
+   - **NEVER** create directories in home directory, `/tmp/`, or outside project structure
+   - **ALWAYS** check if a similar directory already exists before creating new ones
+
+5. **API and UI Integration Requirements**
+   - **BOTH API AND UI MUST ALWAYS WORK TOGETHER**
+   - **NEVER** suggest using curl or direct API calls to bypass UI bugs
+   - **NEVER** suggest testing only the API when the UI has a problem
+   - When there's a bug, **ALWAYS FIX BOTH LAYERS** if needed:
+     - If API works but UI fails → **FIX THE UI**
+     - If UI sends wrong data → **FIX THE UI**
+     - If API validation is too strict → **FIX THE API**
+   - The user expects a fully functional web application, not API-only access
+   - Testing via curl is ONLY acceptable for debugging, NEVER as a workaround
+
+6. **When in Doubt**
    - Present a plan before implementing
    - Explain trade-offs and alternatives
    - Wait for user approval

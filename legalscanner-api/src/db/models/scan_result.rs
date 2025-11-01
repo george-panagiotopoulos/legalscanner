@@ -6,7 +6,7 @@ pub struct ScanResult {
     pub id: i64,
     pub scan_id: String,
     pub file_path: String,
-    pub result_type: String, // license, copyright
+    pub result_type: String, // license, copyright, ecc
     pub license_name: Option<String>,
     pub license_spdx_id: Option<String>,
     pub copyright_statement: Option<String>,
@@ -14,6 +14,10 @@ pub struct ScanResult {
     pub copyright_years: Option<String>,    // JSON array
     pub confidence: Option<f32>,
     pub raw_data: Option<String>, // Original scanner output (JSON)
+    pub risk_severity: Option<String>, // low, medium, high, critical (for ECC findings)
+    pub ecc_source: Option<String>, // Source scanner (e.g., 'semgrep', 'scancode')
+    pub ecc_line_number: Option<i32>, // Line number where finding was detected
+    pub ecc_check_id: Option<String>, // Rule/check ID from scanner
 }
 
 impl ScanResult {
@@ -70,6 +74,35 @@ impl ScanResult {
         .await
     }
 
+    pub async fn create_ecc(
+        pool: &SqlitePool,
+        scan_id: &str,
+        file_path: &str,
+        ecc_content: &str,
+        risk_severity: &str,
+        ecc_source: Option<&str>,
+        ecc_line_number: Option<i32>,
+        ecc_check_id: Option<&str>,
+    ) -> Result<ScanResult, sqlx::Error> {
+        sqlx::query_as::<_, ScanResult>(
+            r#"
+            INSERT INTO scan_results
+            (scan_id, file_path, result_type, raw_data, risk_severity, ecc_source, ecc_line_number, ecc_check_id)
+            VALUES (?, ?, 'ecc', ?, ?, ?, ?, ?)
+            RETURNING *
+            "#,
+        )
+        .bind(scan_id)
+        .bind(file_path)
+        .bind(ecc_content)
+        .bind(risk_severity)
+        .bind(ecc_source)
+        .bind(ecc_line_number)
+        .bind(ecc_check_id)
+        .fetch_one(pool)
+        .await
+    }
+
     pub async fn find_by_scan_id(
         pool: &SqlitePool,
         scan_id: &str,
@@ -107,6 +140,22 @@ impl ScanResult {
             SELECT * FROM scan_results
             WHERE scan_id = ? AND result_type = 'copyright'
             ORDER BY file_path
+            "#,
+        )
+        .bind(scan_id)
+        .fetch_all(pool)
+        .await
+    }
+
+    pub async fn find_ecc_by_scan_id(
+        pool: &SqlitePool,
+        scan_id: &str,
+    ) -> Result<Vec<ScanResult>, sqlx::Error> {
+        sqlx::query_as::<_, ScanResult>(
+            r#"
+            SELECT * FROM scan_results
+            WHERE scan_id = ? AND result_type = 'ecc'
+            ORDER BY risk_severity DESC, file_path
             "#,
         )
         .bind(scan_id)

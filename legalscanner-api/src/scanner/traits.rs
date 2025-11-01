@@ -7,6 +7,7 @@ pub struct ScanResult {
     pub file_path: String,
     pub licenses: Vec<LicenseFinding>,
     pub copyrights: Vec<CopyrightFinding>,
+    pub ecc_findings: Vec<EccFinding>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -21,6 +22,18 @@ pub struct CopyrightFinding {
     pub statement: String,
     pub holders: Vec<String>,
     pub years: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EccFinding {
+    pub content: String,
+    pub risk_severity: String, // "low", "medium", "high", "critical"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>, // "semgrep", "scancode", "fossology"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub line_number: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub check_id: Option<String>, // Semgrep rule ID
 }
 
 #[derive(Debug, thiserror::Error)]

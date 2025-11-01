@@ -27,3 +27,8 @@ export const getScanResults = async (scanId) => {
 export const deleteScan = async (scanId) => {
   await client.delete(`/api/v1/scans/${scanId}`)
 }
+
+export const deleteAllScans = async () => {
+  const response = await client.delete('/api/v1/scans')
+  return response.data
+}

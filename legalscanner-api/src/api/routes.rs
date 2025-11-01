@@ -15,6 +15,7 @@ pub fn create_router(state: AppState) -> Router {
         // Scans
         .route("/api/v1/scans", post(handlers::scans::create_scan))
         .route("/api/v1/scans", get(handlers::scans::list_scans))
+        .route("/api/v1/scans", delete(handlers::scans::delete_all_scans))
         .route("/api/v1/scans/:id", get(handlers::scans::get_scan))
         .route("/api/v1/scans/:id", delete(handlers::scans::delete_scan))
         .route(

@@ -1,0 +1,232 @@
+rules:
+  # ===========================
+  # Strong Encryption Detection
+  # ===========================
+
+  - id: ecc-strong-symmetric-encryption
+    pattern-regex: '\b(AES256|AES-256|aes256|aes_256|Aes256|ChaCha20|chacha20)\b'
+    message: "Strong symmetric encryption detected: $...MATCH. AES-256 and ChaCha20 may require export control classification under ECCN 5D002."
+    severity: WARNING
+    languages: [python, rust, javascript, typescript, java, go, c, cpp]
+    paths:
+      exclude:
+        - "*.json"
+        - "*.lock"
+        - "*.md"
+    metadata:
+      category: security
+      subcategory: export-control
+      eccn: "5D002"
+      cwe: "CWE-326"
+      confidence: HIGH
+      impact: MEDIUM
+      likelihood: HIGH
+
+  - id: ecc-strong-rsa-keys
+    pattern-regex: "(RSA|rsa)[-_]?(2048|3072|4096|8192)"
+    message: "Strong RSA key size detected (≥2048 bits). May require export control classification under ECCN 5D002."
+    severity: WARNING
+    languages: [generic]
+    metadata:
+      category: security
+      subcategory: export-control
+      eccn: "5D002"
+      key_strength: "strong"
+
+  - id: ecc-elliptic-curve-crypto
+    pattern-regex: '\b(P-256|P-384|P-521|secp256k1|secp384r1|secp521r1|Curve25519|Ed25519|X25519|ECDSA|ECDH|elliptic_curve|EllipticCurve)\b'
+    message: "Elliptic Curve Cryptography (ECC) detected: $...MATCH. ECC with >112 bits requires export control classification under ECCN 5D002."
+    severity: WARNING
+    languages: [python, rust, javascript, typescript, java, go, c, cpp]
+    paths:
+      exclude:
+        - "*.json"
+        - "*.lock"
+        - "*.md"
+    metadata:
+      category: security
+      subcategory: export-control
+      eccn: "5D002"
+      algorithm_type: "asymmetric"
+
+  # ===========================
+  # Cryptographic Hash Functions
+  # ===========================
+
+  - id: ecc-cryptographic-hash-functions
+    pattern-regex: '\b(SHA256|SHA-256|sha256|SHA384|SHA-384|sha384|SHA512|SHA-512|sha512|SHA3|BLAKE2|blake2|Whirlpool|whirlpool|RIPEMD|ripemd)\b'
+    message: "Cryptographic hash function detected: $...MATCH. Strong hash functions may be subject to export controls under ECCN 5D002."
+    severity: INFO
+    languages: [python, rust, javascript, typescript, java, go]
+    paths:
+      exclude:
+        - "*.json"
+        - "*.lock"
+        - "*.md"
+    metadata:
+      category: security
+      subcategory: export-control
+      algorithm_type: "hash"
+
+  # ===========================
+  # Crypto Library Imports
+  # ===========================
+
+  - id: ecc-rust-crypto-libraries
+    pattern-either:
+      - pattern: |
+          use $X::$Y::Aes256;
+      - pattern: |
+          use $X::$Y::ChaCha20;
+      - pattern: |
+          use ring::$Y;
+      - pattern: |
+          use openssl::$Y;
+      - pattern: |
+          extern crate crypto;
+      - pattern: |
+          use rustcrypto::$Y;
+      - pattern: |
+          use sha2::$Y;
+      - pattern: |
+          use sha3::$Y;
+    message: "Rust cryptographic library usage detected. Review for export control requirements."
+    severity: WARNING
+    languages: [rust]
+    metadata:
+      category: security
+      subcategory: export-control
+      technology: [rust]
+
+  - id: ecc-python-crypto-libraries
+    pattern-either:
+      - pattern: |
+          import cryptography
+      - pattern: |
+          from cryptography import $X
+      - pattern: |
+          import Crypto
+      - pattern: |
+          from Crypto import $X
+      - pattern: |
+          import nacl
+      - pattern: |
+          from nacl import $X
+      - pattern: |
+          import hashlib
+    message: "Python cryptographic library usage detected. Review for export control requirements."
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+      subcategory: export-control
+      technology: [python]
+
+  - id: ecc-javascript-crypto-libraries
+    pattern-either:
+      - pattern: |
+          require('crypto')
+      - pattern: |
+          import crypto from 'crypto'
+      - pattern: |
+          require('node-forge')
+      - pattern: |
+          import $X from 'crypto-js'
+      - pattern: |
+          require('tweetnacl')
+    message: "JavaScript/Node.js cryptographic library usage detected. Review for export control requirements."
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      category: security
+      subcategory: export-control
+      technology: [javascript, nodejs]
+
+  - id: ecc-java-crypto-libraries
+    pattern-either:
+      - pattern: |
+          import javax.crypto.$X;
+      - pattern: |
+          import java.security.$X;
+      - pattern: |
+          import org.bouncycastle.$X;
+    message: "Java cryptographic library usage detected. Review for export control requirements."
+    severity: WARNING
+    languages: [java]
+    metadata:
+      category: security
+      subcategory: export-control
+      technology: [java]
+
+  # ===========================
+  # Algorithm Implementations
+  # ===========================
+
+  - id: ecc-aes-implementation
+    pattern-either:
+      - pattern-regex: "fn\\s+aes_(encrypt|decrypt)"
+      - pattern-regex: "def\\s+aes_(encrypt|decrypt)"
+      - pattern-regex: "function\\s+aes(Encrypt|Decrypt)"
+      - pattern-regex: "class\\s+AES"
+      - pattern-regex: "struct\\s+Aes"
+    message: "AES implementation detected. AES with 256-bit keys requires export control review."
+    severity: WARNING
+    languages: [generic]
+    metadata:
+      category: security
+      subcategory: export-control
+      algorithm: "AES"
+
+  - id: ecc-rsa-implementation
+    pattern-either:
+      - pattern-regex: "fn\\s+rsa_(encrypt|decrypt|sign|verify)"
+      - pattern-regex: "def\\s+rsa_(encrypt|decrypt|sign|verify)"
+      - pattern-regex: "class\\s+RSA"
+      - pattern-regex: "struct\\s+Rsa"
+    message: "RSA implementation detected. RSA >2048 bits requires export control review."
+    severity: WARNING
+    languages: [generic]
+    metadata:
+      category: security
+      subcategory: export-control
+      algorithm: "RSA"
+
+  # ===========================
+  # Key Generation
+  # ===========================
+
+  - id: ecc-key-generation
+    pattern-either:
+      - pattern: generate_key
+      - pattern: generateKey
+      - pattern: gen_key
+      - pattern: genkey
+      - pattern: KeyGenerator
+      - pattern: key_generator
+    message: "Cryptographic key generation detected. Review key sizes for export control compliance."
+    severity: INFO
+    languages: [generic]
+    metadata:
+      category: security
+      subcategory: export-control
+      operation: "key-generation"
+
+  # ===========================
+  # Specific Algorithm Names
+  # ===========================
+
+  - id: ecc-controlled-algorithms
+    pattern-regex: '\b(DES|3DES|TripleDES|Blowfish|Twofish|Serpent|Camellia|IDEA|CAST|RC4|RC5|RC6)\b'
+    message: "Legacy or controlled encryption algorithm detected: $...MATCH. Review for export compliance under ECCN 5D002."
+    severity: INFO
+    languages: [python, rust, javascript, typescript, java, go, c, cpp]
+    paths:
+      exclude:
+        - "*.json"
+        - "*.lock"
+        - "*.md"
+        - "*.txt"
+    metadata:
+      category: security
+      subcategory: export-control
+      algorithm_class: "symmetric"

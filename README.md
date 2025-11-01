@@ -6,6 +6,7 @@ A comprehensive tool to scan Git repositories for legal and compliance issues, i
 
 - **License Detection**: Identify all open source licenses using multiple scanners (Nomos, Monk, Ojo)
 - **Copyright Detection**: Extract all copyright statements, holders, and years
+- **Export Control & Security Analysis**: Detect cryptographic implementations and export control-relevant code patterns using Semgrep
 - **Private Repository Support**: Scan private repositories with GitHub Personal Access Tokens
 - **REST API**: Programmatic access for automation and CI/CD integration
 - **Web UI**: User-friendly interface with real-time scan monitoring
@@ -17,7 +18,9 @@ A comprehensive tool to scan Git repositories for legal and compliance issues, i
 
 - **Backend**: Rust + Axum web framework
 - **Frontend**: Vue 3 + Vite + Pinia
-- **Scanner Engine**: Fossology (containerized)
+- **Scanner Engines**:
+  - Fossology (license and copyright detection)
+  - Semgrep (export control and security pattern analysis)
 - **Database**: SQLite with async SQLx
 - **Git Operations**: libgit2 with authentication support
 - **Deployment**: Docker Compose with health checks
@@ -324,7 +327,13 @@ See `.env.example` for all configuration options:
    - SPDX identifier extraction
    - REST API for job submission
 
-4. **SQLite Database**
+4. **Semgrep**
+   - Static analysis for security patterns
+   - Cryptographic implementation detection
+   - Export control compliance checking
+   - Custom ruleset for legal compliance
+
+5. **SQLite Database**
    - Stores scans, results, API keys
    - Async operations via SQLx
    - Automatic migrations
@@ -333,13 +342,14 @@ See `.env.example` for all configuration options:
 
 1. **Initiation**: User submits Git URL (and optional token) via UI or API
 2. **Git Clone**: Repository cloned to temporary workspace with authentication if needed
-3. **Fossology Submission**: Files uploaded to Fossology for analysis
-4. **Scanning**: Fossology runs multiple agents (nomos, monk, ojo, copyright)
-5. **Result Retrieval**: API polls Fossology for job completion
-6. **Parsing**: Results normalized to standard format with SPDX mapping
-7. **Storage**: Licenses and copyrights stored per-file in database
-8. **Cleanup**: Temporary workspace deleted
-9. **Display**: Results available via API and UI
+3. **Parallel Scanning**:
+   - **Fossology**: Files uploaded to Fossology for license and copyright analysis (nomos, monk, ojo, copyright agents)
+   - **Semgrep**: Repository scanned for cryptographic implementations and export control patterns
+4. **Result Retrieval**: API polls both scanners for job completion
+5. **Parsing**: Results normalized to standard format with SPDX mapping and security classifications
+6. **Storage**: Licenses, copyrights, and security findings stored per-file in database
+7. **Cleanup**: Temporary workspace deleted
+8. **Display**: Comprehensive results available via API and UI with filtering capabilities
 
 ### Security Features
 

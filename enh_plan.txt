@@ -1,0 +1,683 @@
+# Legal Scanner Enhancement Plan
+Generated: 2025-11-01
+
+## Executive Summary
+
+Based on comprehensive codebase analysis, this document outlines the top 3 recommended enhancements for the Legal Scanner system, assuming ECC/license/copyright scanning is working correctly.
+
+---
+
+## 🏆 TOP 3 ENHANCEMENT RECOMMENDATIONS
+
+### 1. SBOM/SPDX Document Export
+**Priority: CRITICAL ⭐⭐⭐⭐⭐**
+
+#### Why This Matters
+- **Industry Standard**: SPDX is the Linux Foundation standard for software bill of materials
+- **Compliance Requirement**: Many organizations REQUIRE SPDX/SBOM for legal approval
+- **Ecosystem Integration**: SPDX files integrate with vulnerability scanners, dependency analyzers, and compliance platforms (GitHub Dependency Graph, Snyk, Grype, etc.)
+- **Customer Value**: You already collect all the data—you're just not exporting it in the standard format
+
+#### Benefits
+✅ **Immediate compliance value** - makes your tool enterprise-ready
+✅ **Tool interoperability** - integrates with existing security/compliance workflows
+✅ **Legal team adoption** - lawyers/compliance officers know SPDX
+✅ **Differentiator** - not all scanners export SPDX properly
+
+#### Open Source Library Recommendation
+**Primary: `spdx` crate (Rust)**
+- Crate: https://crates.io/crates/spdx
+- Pure Rust SPDX 2.3 library
+- Supports JSON, YAML, Tag-Value formats
+- Type-safe builders for documents
+- Maturity: ⭐⭐⭐ Good
+- Ease of Use: ⭐⭐⭐⭐ Easy
+
+**Alternative: Custom serializer**
+- SPDX JSON schema is well-documented
+- Full control over output format
+- ~500 lines of code to implement properly
+- Good if you need specific customizations
+
+#### Implementation Estimate
+- **Complexity**: Medium
+- **Time**: 2-3 days
+- **Files Changed**: ~8 files
+  - New API handler: `legalscanner-api/src/api/handlers/sbom.rs`
+  - New model: `legalscanner-api/src/api/models/sbom.rs`
+  - Route registration in `routes.rs`
+  - UI: Download button + format selector in ResultsViewer.vue
+  - Integration tests
+
+#### Technical Details
+- New endpoint: `GET /api/v1/scans/:id/sbom?format=json|yaml|tag-value`
+- SPDX 2.3 document structure:
+  - Package metadata (repository URL, scan timestamp, tool info)
+  - File listings with detected licenses and copyrights
+  - ECC findings as SPDX annotations
+  - Relationships (file → package, file → license)
+- Response: Downloadable file or inline JSON/YAML
+
+---
+
+### 2. License Compatibility Analysis Engine
+**Priority: HIGH ⭐⭐⭐⭐**
+
+#### Why This Matters
+- **Catches Compliance Violations**: Mixing GPL + proprietary code = legal nightmare
+- **Proactive Risk Detection**: Warns BEFORE shipping incompatible code combinations
+- **Educational Value**: Teaches developers about license restrictions and obligations
+- **Competitive Advantage**: Most free scanners don't perform compatibility analysis
+
+#### Benefits
+✅ **Prevents legal issues** - catches GPL/MIT/Apache conflicts automatically
+✅ **Risk quantification** - clear "red flags" for legal review prioritization
+✅ **Actionable insights** - tells users what's wrong and why it matters
+✅ **Low false positives** - rule-based logic is deterministic and explainable
+
+#### Open Source Library Recommendation
+**Recommended: Custom rule-based compatibility matrix**
+- **No perfect Rust library exists** (opportunity to create one!)
+- Build compatibility matrix manually using authoritative sources
+- ~50 common licenses with well-documented compatibility rules
+- 2D matrix approach: License A + License B = Compatible/Incompatible/Warning
+
+**Reference Data Sources:**
+- FSF License List: https://www.gnu.org/licenses/license-list.html
+- OSI Approved Licenses: https://opensource.org/licenses/
+- SPDX License List: https://spdx.org/licenses/
+- Blue Oak Council rankings: https://blueoakcouncil.org/list
+- Google's License Classifier compatibility data
+
+**Alternative Reference: `askalono` (Amazon's license detector)**
+- Crate: https://crates.io/crates/askalono
+- Pure Rust, good license taxonomy
+- Doesn't do compatibility analysis itself
+- Could extract compatibility rules from their data/research
+
+#### Implementation Estimate
+- **Complexity**: Medium-High
+- **Time**: 3-5 days
+- **Files Changed**: ~12 files
+  - New module: `legalscanner-api/src/analysis/compatibility.rs`
+  - Compatibility matrix: `legalscanner-api/src/analysis/compatibility_matrix.rs` (data structure)
+  - Database migration: Add `license_conflicts` table
+  - API handler: `legalscanner-api/src/api/handlers/compatibility.rs`
+  - UI: New "Conflicts" tab in ResultsViewer.vue
+  - Documentation for compatibility rules
+
+#### Technical Details
+- Algorithm:
+  1. Scan all files in repository for licenses
+  2. Build license graph (which licenses appear together)
+  3. Apply compatibility matrix rules
+  4. Detect conflicts (incompatible combinations)
+  5. Generate warnings with explanations
+- Conflict types:
+  - **INCOMPATIBLE**: Cannot be combined legally (e.g., GPL-2.0 + Proprietary)
+  - **WARNING**: Requires careful review (e.g., GPL-3.0 + Apache-2.0)
+  - **COMPATIBLE**: No known issues (e.g., MIT + Apache-2.0)
+- New database table schema:
+  ```sql
+  CREATE TABLE license_conflicts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      scan_id TEXT NOT NULL,
+      license_a TEXT NOT NULL,
+      license_b TEXT NOT NULL,
+      conflict_type TEXT NOT NULL,  -- 'incompatible', 'warning', 'compatible'
+      explanation TEXT NOT NULL,
+      affected_files TEXT,           -- JSON array of file paths
+      FOREIGN KEY (scan_id) REFERENCES scans(id) ON DELETE CASCADE
+  );
+  ```
+
+---
+
+### 3. Enhanced Export Formats (CSV + Executive Report)
+**Priority: HIGH ⭐⭐⭐⭐**
+
+#### Why This Matters
+- **User Workflow**: Legal teams live in Excel spreadsheets, not JSON viewers
+- **Report Generation**: Managers need executive summaries for decision-making
+- **Audit Trail**: CSV exports are required for compliance audit documentation
+- **Accessibility**: Non-technical stakeholders can analyze data without API knowledge
+
+#### Benefits
+✅ **Business user adoption** - CSV = universal format everyone understands
+✅ **Offline analysis** - Excel pivot tables, filtering, sorting, charts
+✅ **Compliance documentation** - attach exports to legal review tickets/Jira
+✅ **Quick wins** - relatively easy to implement, high perceived value
+
+#### Open Source Library Recommendations
+
+**For CSV Export: `csv` crate**
+- Crate: https://crates.io/crates/csv
+- BurntSushi's excellent CSV writer
+- Handles escaping, quoting, streaming for large datasets
+- Maturity: ⭐⭐⭐⭐⭐ Excellent
+- Ease of Use: ⭐⭐⭐⭐⭐ Very Easy
+- Implementation: ~50 lines of code for basic export
+
+**For Excel Export: `rust_xlsxwriter`**
+- Crate: https://crates.io/crates/rust_xlsxwriter
+- Pure Rust XLSX writer (no Excel installation needed)
+- Supports multiple sheets, cell formatting, basic charts
+- Maturity: ⭐⭐⭐⭐ Very Good
+- Ease of Use: ⭐⭐⭐⭐ Easy
+- Implementation: ~200 lines for multi-sheet export with formatting
+
+**For HTML Reports: `tera` or `askama` (template engines)**
+- Tera: https://crates.io/crates/tera (Jinja2-like)
+- Askama: https://crates.io/crates/askama (compile-time templates)
+- Modern HTML5 with CSS, print-to-PDF friendly
+- Maturity: ⭐⭐⭐⭐ Very Good
+- Ease of Use: ⭐⭐⭐⭐ Easy
+- Implementation: ~100 lines + HTML template
+
+**For PDF Reports (Optional): `genpdf` or `printpdf`**
+- Genpdf: https://crates.io/crates/genpdf
+- Printpdf: https://crates.io/crates/printpdf
+- Pure Rust PDF generation
+- Maturity: ⭐⭐⭐ Good
+- Ease of Use: ⭐⭐⭐ Moderate
+- Implementation: ~300-500 lines for formatted report
+- **Note**: HTML + browser print is simpler and more flexible
+
+#### Implementation Estimate
+- **Complexity**: Low-Medium
+- **Time**: 2-3 days
+- **Files Changed**: ~10 files
+  - New module: `legalscanner-api/src/export/` (csv.rs, excel.rs, html_report.rs)
+  - New API handler: `legalscanner-api/src/api/handlers/export.rs`
+  - Route: `GET /api/v1/scans/:id/export?format=csv|excel|html`
+  - UI: Export dropdown with format options in ScanDetails.vue
+  - Streaming response for large exports
+
+#### Technical Details
+
+**CSV Export Options:**
+- Three separate CSV files (or combined with type column):
+  1. **licenses.csv**: file_path, license_name, spdx_id, confidence
+  2. **copyrights.csv**: file_path, copyright_statement, holders, years
+  3. **ecc.csv**: file_path, risk_severity, check_id, line_number, content
+
+**Excel Export Structure:**
+- Multi-sheet workbook:
+  - Sheet 1: "Summary" - scan metadata, statistics, risk overview
+  - Sheet 2: "Licenses" - license findings table
+  - Sheet 3: "Copyrights" - copyright findings table
+  - Sheet 4: "ECC Findings" - export control findings table
+  - Sheet 5: "Charts" (optional) - license distribution pie chart
+
+**HTML Executive Report:**
+- Single-page responsive design
+- Sections:
+  - Header: Scan metadata (repo URL, timestamp, status)
+  - Executive Summary: Key statistics, risk score (if implemented)
+  - License Distribution: Table + visual chart
+  - Top 10 Licenses: Sorted by file count
+  - High/Critical ECC Findings: Highlighted table
+  - Recommendations: Actionable next steps
+- Print-to-PDF optimized CSS (@media print)
+- Embeddable charts (Chart.js or SVG)
+
+**API Endpoints:**
+- `GET /api/v1/scans/:id/export?format=csv&type=licenses` - CSV export
+- `GET /api/v1/scans/:id/export?format=excel` - Excel export
+- `GET /api/v1/scans/:id/report.html` - HTML executive report
+
+---
+
+## 📊 RECOMMENDED IMPLEMENTATION ORDER
+
+### Phase 1: Quick Wins (Week 1-2)
+**Goal: Deliver immediate user value with export features**
+
+1. **CSV Export** (2 days)
+   - Low complexity, high user value
+   - Legal teams can immediately analyze data in Excel
+   - Dependencies: `csv` crate only
+
+2. **HTML Executive Report** (2 days)
+   - Simple HTML template with summary statistics
+   - Professional output for management presentations
+   - Dependencies: `tera` or `askama` for templating
+
+3. **SBOM/SPDX JSON Export** (3 days)
+   - Critical for enterprise compliance workflows
+   - Unlocks integration with other tools
+   - Dependencies: `spdx` crate
+
+**Total: 7 days**
+
+**Rationale**: Export features are low-risk (no scanning logic changes), high-impact (users can immediately extract value from existing scans), and don't require database migrations.
+
+---
+
+### Phase 2: Advanced Analysis (Week 3-4)
+**Goal: Add intelligent compliance analysis on top of collected data**
+
+4. **License Compatibility Analysis** (5 days)
+   - Complex logic but high compliance value
+   - Differentiates your tool from competitors
+   - Requires database migration for `license_conflicts` table
+
+5. **Risk Scoring System** (3 days)
+   - Aggregates compatibility findings + ECC severity
+   - Overall repository risk score (0-100)
+   - Dashboard visualization improvements
+
+**Total: 8 days**
+
+**Rationale**: Build advanced analysis features on top of existing scan data. Creates competitive differentiation and proactive compliance value.
+
+---
+
+### Phase 3: Polish & Scale (Week 5+)
+**Goal: Improve performance and UX for large-scale usage**
+
+6. **File Filtering/Exclusions** (2 days)
+   - `.gitignore`-style exclusion patterns
+   - Performance optimization for large repositories
+
+7. **Search & Filter UI** (2 days)
+   - Real-time search in scan results
+   - Filter by license type, risk severity, file extension
+
+8. **Scan Comparison View** (3 days)
+   - Side-by-side comparison of two scans
+   - Highlight license/ECC changes over time
+
+**Total: 7 days**
+
+---
+
+## 🎯 RECOMMENDED STARTING POINT
+
+### **Start with: SBOM Export + CSV Export (5 days total)**
+
+**Why this combination?**
+
+1. **SBOM Export**:
+   - Unlocks enterprise adoption (compliance teams NEED this)
+   - Industry standard format (SPDX 2.3)
+   - Enables tool integrations (Snyk, GitHub, Grype)
+
+2. **CSV Export**:
+   - Unlocks business user adoption (legal/managers need Excel)
+   - Universal format everyone understands
+   - Enables offline analysis and reporting
+
+3. **Complementary**:
+   - SBOM for machine consumption (tools/automation)
+   - CSV for human consumption (analysis/presentations)
+
+4. **Low Risk**:
+   - Both are export-only features
+   - No changes to scanning logic or database schema
+   - Easy to test and validate
+
+5. **High ROI**:
+   - Maximum user value for minimum development complexity
+   - Addresses top user requests
+   - Makes existing scans more actionable
+
+---
+
+### **Then Add: License Compatibility Analysis (5 days)**
+
+**Why second?**
+
+1. **Differentiator**: Most free/open-source tools don't do compatibility analysis
+2. **Prevents Legal Issues**: Proactive value, not just data collection
+3. **Uses Existing Data**: No new scanning infrastructure needed
+4. **Builds on SBOM**: Compatibility warnings can be embedded in SPDX documents
+
+---
+
+## 🛠️ OPEN SOURCE LIBRARY SUMMARY
+
+| Feature | Recommended Library | Crate URL | Maturity | Ease of Use | Impl. Time |
+|---------|--------------------|-----------|---------|--------------| -----------|
+| **SBOM/SPDX** | `spdx` | https://crates.io/crates/spdx | ⭐⭐⭐ Good | ⭐⭐⭐⭐ Easy | 2-3 days |
+| **CSV Export** | `csv` | https://crates.io/crates/csv | ⭐⭐⭐⭐⭐ Excellent | ⭐⭐⭐⭐⭐ Very Easy | 1-2 days |
+| **Excel Export** | `rust_xlsxwriter` | https://crates.io/crates/rust_xlsxwriter | ⭐⭐⭐⭐ Very Good | ⭐⭐⭐⭐ Easy | 2 days |
+| **HTML Reports** | `tera` or `askama` | https://crates.io/crates/tera | ⭐⭐⭐⭐ Very Good | ⭐⭐⭐⭐ Easy | 1-2 days |
+| **PDF Reports** | `genpdf` | https://crates.io/crates/genpdf | ⭐⭐⭐ Good | ⭐⭐⭐ Moderate | 3-5 days |
+| **License Compat** | **Custom matrix** | N/A (build yourself) | N/A | ⭐⭐⭐ Moderate | 3-5 days |
+
+**Key Takeaway**: All recommended libraries are mature, well-maintained Rust crates with active communities. No external dependencies or system requirements.
+
+---
+
+## 📋 DETAILED IMPLEMENTATION PLAN: PHASE 1
+
+### Feature 1: SBOM/SPDX Export
+
+#### Dependencies to Add
+```toml
+# Cargo.toml
+[dependencies]
+spdx = "0.10"  # SPDX 2.3 support
+serde_json = "1.0"  # Already included
+serde_yaml = "0.9"  # For YAML format
+chrono = "0.4"  # Already included for timestamps
+```
+
+#### Files to Create/Modify
+
+**New Files:**
+1. `legalscanner-api/src/api/handlers/sbom.rs` (~200 lines)
+   - Handler function: `pub async fn get_scan_sbom()`
+   - Query parameter parsing (format: json/yaml/tag-value)
+   - Database query for scan + results
+   - SPDX document generation
+   - Response serialization
+
+2. `legalscanner-api/src/api/models/sbom.rs` (~150 lines)
+   - SPDX document builder
+   - Conversion from scan results to SPDX entities
+   - License mapping to SPDX identifiers
+   - Relationship generation
+
+**Modified Files:**
+3. `legalscanner-api/src/api/routes.rs` (+2 lines)
+   - Register new route: `.route("/api/v1/scans/:id/sbom", get(handlers::sbom::get_scan_sbom))`
+
+4. `legalscanner-api/src/api/handlers/mod.rs` (+1 line)
+   - Add module: `pub mod sbom;`
+
+5. `legalscanner-ui/src/components/ResultsViewer.vue` (~50 lines modified)
+   - Add "Export SBOM" button with dropdown (JSON, YAML, Tag-Value)
+   - API call to download SBOM
+   - File download handling
+
+6. `legalscanner-ui/src/api/scans.js` (+10 lines)
+   - New function: `exportSBOM(scanId, format)`
+
+#### SPDX Document Structure
+```json
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "Legal Scanner Report - {repo_name}",
+  "documentNamespace": "https://legalscanner.example.com/spdx/{scan_id}",
+  "creationInfo": {
+    "created": "2025-11-01T12:00:00Z",
+    "creators": ["Tool: LegalScanner-1.0"],
+    "licenseListVersion": "3.21"
+  },
+  "packages": [{
+    "SPDXID": "SPDXRef-Package",
+    "name": "{repo_name}",
+    "downloadLocation": "{git_url}",
+    "filesAnalyzed": true,
+    "verificationCode": {
+      "verificationCodeValue": "{sha1}"
+    }
+  }],
+  "files": [{
+    "SPDXID": "SPDXRef-File-1",
+    "fileName": "./src/main.rs",
+    "licenseConcluded": "MIT",
+    "copyrightText": "Copyright 2025 Example Corp",
+    "annotations": [{
+      "annotationType": "REVIEW",
+      "annotator": "Tool: Semgrep",
+      "annotationDate": "2025-11-01T12:00:00Z",
+      "comment": "ECC Finding: crypto usage detected (risk: high)"
+    }]
+  }],
+  "relationships": [{
+    "spdxElementId": "SPDXRef-Package",
+    "relatedSpdxElement": "SPDXRef-File-1",
+    "relationshipType": "CONTAINS"
+  }]
+}
+```
+
+#### API Response
+- Content-Type: `application/json`, `application/x-yaml`, or `text/plain` (Tag-Value)
+- Content-Disposition: `attachment; filename="scan-{id}-sbom.{ext}"`
+- Streaming for large repositories
+
+---
+
+### Feature 2: CSV Export
+
+#### Dependencies to Add
+```toml
+# Cargo.toml
+[dependencies]
+csv = "1.3"  # CSV writer
+```
+
+#### Files to Create/Modify
+
+**New Files:**
+1. `legalscanner-api/src/export/csv.rs` (~150 lines)
+   - Function: `pub async fn export_licenses_csv()`
+   - Function: `pub async fn export_copyrights_csv()`
+   - Function: `pub async fn export_ecc_csv()`
+   - CSV writer with proper escaping
+
+2. `legalscanner-api/src/export/mod.rs` (~20 lines)
+   - Module declaration and re-exports
+
+**Modified Files:**
+3. `legalscanner-api/src/api/handlers/export.rs` (~100 lines, new file)
+   - Handler: `pub async fn export_scan_results()`
+   - Query parameters: `format=csv`, `type=licenses|copyrights|ecc`
+   - Call appropriate export function
+   - Streaming response
+
+4. `legalscanner-api/src/api/routes.rs` (+2 lines)
+   - Register route: `.route("/api/v1/scans/:id/export", get(handlers::export::export_scan_results))`
+
+5. `legalscanner-ui/src/components/ResultsViewer.vue` (~40 lines modified)
+   - Add "Export CSV" button to each tab (Licenses, Copyrights, ECC)
+   - API call to download CSV
+   - File download handling
+
+6. `legalscanner-ui/src/api/scans.js` (+10 lines)
+   - New function: `exportCSV(scanId, type)`
+
+#### CSV Format Examples
+
+**licenses.csv:**
+```csv
+file_path,license_name,spdx_id,confidence
+src/main.rs,MIT License,MIT,0.95
+src/utils.rs,Apache License 2.0,Apache-2.0,0.89
+```
+
+**copyrights.csv:**
+```csv
+file_path,copyright_statement,holders,years
+src/main.rs,"Copyright 2025 Example Corp","[""Example Corp""]","[""2025""]"
+```
+
+**ecc.csv:**
+```csv
+file_path,risk_severity,check_id,line_number,content
+src/crypto.rs,high,crypto-usage-detected,42,"Uses AES-256 encryption"
+```
+
+---
+
+### Feature 3: HTML Executive Report
+
+#### Dependencies to Add
+```toml
+# Cargo.toml
+[dependencies]
+tera = "1.19"  # Template engine (Jinja2-like)
+# OR
+askama = "0.12"  # Compile-time templates
+```
+
+#### Files to Create/Modify
+
+**New Files:**
+1. `legalscanner-api/src/export/html_report.rs` (~200 lines)
+   - Function: `pub async fn generate_html_report()`
+   - Template rendering with scan data
+   - Summary statistics calculation
+   - Chart data generation (for Chart.js)
+
+2. `legalscanner-api/templates/executive_report.html` (~300 lines)
+   - HTML5 template with embedded CSS
+   - Sections: Header, Summary, Licenses, Copyrights, ECC, Recommendations
+   - Responsive design
+   - Print-optimized (@media print styles)
+   - Chart.js or inline SVG for visualizations
+
+**Modified Files:**
+3. `legalscanner-api/src/api/handlers/export.rs` (~50 lines added)
+   - Handler: `pub async fn get_html_report()`
+   - Call HTML generation function
+   - Return HTML response
+
+4. `legalscanner-api/src/api/routes.rs` (+2 lines)
+   - Register route: `.route("/api/v1/scans/:id/report.html", get(handlers::export::get_html_report))`
+
+5. `legalscanner-ui/src/views/ScanDetails.vue` (~20 lines modified)
+   - Add "View Report" button
+   - Opens report in new tab or iframe
+
+#### HTML Report Structure
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Legal Scanner Report - {{ repo_name }}</title>
+  <style>
+    /* Responsive + print-optimized CSS */
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Legal Scan Report</h1>
+    <div class="metadata">
+      <p>Repository: {{ git_url }}</p>
+      <p>Scan Date: {{ created_at }}</p>
+      <p>Status: {{ status }}</p>
+    </div>
+  </header>
+
+  <section class="summary">
+    <h2>Executive Summary</h2>
+    <div class="stats">
+      <div class="stat">{{ total_files }} Files Scanned</div>
+      <div class="stat">{{ unique_licenses }} Unique Licenses</div>
+      <div class="stat">{{ ecc_findings }} ECC Findings</div>
+    </div>
+  </section>
+
+  <section class="licenses">
+    <h2>License Distribution</h2>
+    <canvas id="licenseChart"></canvas>
+    <table><!-- License table --></table>
+  </section>
+
+  <section class="ecc">
+    <h2>Export Control Findings</h2>
+    <div class="warning-box">{{ critical_ecc_count }} High/Critical findings</div>
+    <table><!-- ECC findings --></table>
+  </section>
+
+  <section class="recommendations">
+    <h2>Recommendations</h2>
+    <ul>
+      <li>Review high-risk ECC findings for export compliance</li>
+      <li>Verify copyleft license obligations (GPL, LGPL)</li>
+      <li>Document license attributions in NOTICE file</li>
+    </ul>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // Chart.js initialization for license distribution pie chart
+  </script>
+</body>
+</html>
+```
+
+---
+
+## 🚀 NEXT STEPS
+
+### Option A: Implement Phase 1 (Recommended)
+**Deliverables:**
+- SBOM/SPDX export (JSON, YAML, Tag-Value formats)
+- CSV export (licenses, copyrights, ECC findings)
+- HTML executive report (print-to-PDF friendly)
+
+**Timeline:** 5-7 days
+**User Impact:** Immediate value - users can export and analyze scan results
+
+### Option B: Implement License Compatibility First
+**Deliverables:**
+- License compatibility analysis engine
+- Conflict detection algorithm
+- New database table for conflicts
+- UI tab for compatibility warnings
+
+**Timeline:** 3-5 days
+**User Impact:** Proactive compliance - catch legal issues before shipping
+
+### Option C: Custom Implementation Order
+Let me know which features you'd like to prioritize, and I'll adjust the plan accordingly.
+
+---
+
+## 📞 QUESTIONS FOR CLARIFICATION
+
+Before proceeding with implementation, please confirm:
+
+1. **Feature Priority**: Do you agree with "SBOM + CSV" as Phase 1, or would you prefer a different starting point?
+
+2. **SPDX Format Preference**: Do you need all three SPDX formats (JSON, YAML, Tag-Value), or just JSON initially?
+
+3. **Excel vs CSV**: Is Excel export important, or is CSV sufficient for your users?
+
+4. **PDF vs HTML Reports**: Do you need actual PDF generation, or is "HTML that prints to PDF" acceptable?
+
+5. **License Compatibility Scope**: How many licenses should the compatibility matrix cover initially? (Top 20 common licenses vs comprehensive 50+ license coverage)
+
+6. **Timeline**: What's your target release date for these enhancements?
+
+---
+
+## 📚 ADDITIONAL CONTEXT
+
+### Current System Capabilities (Already Implemented)
+- ✅ License detection (Fossology: Nomos, Monk, Ojo)
+- ✅ Copyright detection (Fossology copyright agent)
+- ✅ ECC/crypto detection (Semgrep scanner)
+- ✅ Database storage for all scan results
+- ✅ REST API for scan management
+- ✅ Vue 3 UI with results viewer
+- ✅ API key authentication
+- ✅ Git repository cloning with auth support
+
+### Gaps Being Addressed
+- ❌ No SBOM/SPDX export (addressed by Enhancement #1)
+- ❌ No CSV/Excel export (addressed by Enhancement #3)
+- ❌ No license compatibility analysis (addressed by Enhancement #2)
+- ❌ No executive reports (addressed by Enhancement #3)
+- ❌ No risk scoring/aggregation (Phase 2 future work)
+
+### Architecture Compliance
+All proposed enhancements follow CLAUDE.md guidelines:
+- ✅ No changes to core technology stack (Rust/Axum, Vue3, SQLite)
+- ✅ Uses established error handling patterns (AppError enum)
+- ✅ Follows database patterns (SQLx with async)
+- ✅ Maintains RESTful API conventions
+- ✅ Scanner trait pattern preserved
+- ✅ No architectural changes—only additive features
+
+---
+
+**End of Enhancement Plan**

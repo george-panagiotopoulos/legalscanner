@@ -54,7 +54,7 @@ impl Default for AnalysisSpec {
         Self {
             bucket: true,
             copyright_email_author: true,
-            ecc: false,
+            ecc: true,  // Enable ECC scanning for export control detection
             keyword: false,
             mime: true,
             monk: true,

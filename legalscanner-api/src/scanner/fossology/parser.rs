@@ -15,6 +15,7 @@ pub fn parse_license_results(results: Vec<LicenseResult>) -> Vec<ScanResult> {
                 file_path: license_result.file_path.clone(),
                 licenses: Vec::new(),
                 copyrights: Vec::new(),
+                ecc_findings: Vec::new(),
             });
 
         for finding in license_result.findings {
@@ -62,6 +63,7 @@ pub fn merge_copyright_results(
             file_path,
             licenses: Vec::new(),
             copyrights,
+            ecc_findings: Vec::new(),
         });
     }
 

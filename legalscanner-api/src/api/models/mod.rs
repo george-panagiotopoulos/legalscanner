@@ -16,6 +16,8 @@ pub struct ScanResponse {
     pub status: String,
     pub created_at: String,
     pub git_url: String,
+    pub fossology_status: String,
+    pub semgrep_status: String,
 }
 
 #[derive(Debug, Serialize)]

@@ -9,6 +9,7 @@ mod utils;
 use crate::config::Config;
 use crate::error::AppError;
 use crate::scanner::fossology::FossologyScanner;
+use crate::scanner::semgrep::SemgrepScanner;
 use crate::scanner::Scanner;
 use std::sync::Arc;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -17,7 +18,8 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 pub struct AppState {
     pub db: sqlx::SqlitePool,
     pub config: Arc<Config>,
-    pub scanner: Arc<dyn Scanner>,
+    pub fossology_scanner: Arc<dyn Scanner>,
+    pub semgrep_scanner: Arc<dyn Scanner>,
 }
 
 #[tokio::main]
@@ -43,12 +45,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     db::run_migrations(&db_pool).await?;
     tracing::info!("Database migrations completed");
 
-    // Initialize scanner
-    let scanner = FossologyScanner::new(
+    // Initialize Fossology scanner
+    let fossology_scanner = FossologyScanner::new(
         config.fossology_url.clone(),
         config.fossology_api_token.clone(),
     );
-    tracing::info!("Scanner initialized");
+    tracing::info!("Fossology scanner initialized");
+
+    // Initialize Semgrep scanner
+    let semgrep_scanner = SemgrepScanner::new();
+    tracing::info!("Semgrep scanner initialized");
 
     // Ensure workspace directory exists
     git::workspace::ensure_base_dir(&config.temp_workspace_dir).await?;
@@ -58,7 +64,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app_state = AppState {
         db: db_pool,
         config: Arc::new(config.clone()),
-        scanner: Arc::new(scanner),
+        fossology_scanner: Arc::new(fossology_scanner),
+        semgrep_scanner: Arc::new(semgrep_scanner),
     };
 
     // Build router

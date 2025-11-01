@@ -73,6 +73,8 @@ impl Scanner for FossologyScanner {
         let copyright_results = self.client.get_copyrights(upload_id).await?;
         scan_results = parser::merge_copyright_results(scan_results, copyright_results);
 
+        // Note: ECC detection is now handled by Semgrep scanner, not Fossology
+
         tracing::info!(
             "Scan complete, found results for {} files",
             scan_results.len()

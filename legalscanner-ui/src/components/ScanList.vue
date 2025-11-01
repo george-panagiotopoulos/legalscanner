@@ -28,6 +28,20 @@
           <span class="scan-date">{{ formatDate(scan.created_at) }}</span>
         </div>
         <div class="scan-url">{{ scan.git_url }}</div>
+        <div v-if="scan.fossology_status || scan.semgrep_status" class="scanner-progress">
+          <div class="scanner-item">
+            <span class="scanner-label">Fossology:</span>
+            <span class="scanner-badge" :class="`status-${scan.fossology_status}`">
+              {{ formatStatus(scan.fossology_status) }}
+            </span>
+          </div>
+          <div class="scanner-item">
+            <span class="scanner-label">Semgrep:</span>
+            <span class="scanner-badge" :class="`status-${scan.semgrep_status}`">
+              {{ formatStatus(scan.semgrep_status) }}
+            </span>
+          </div>
+        </div>
         <div class="scan-actions">
           <button class="btn-small btn-view" @click.stop="viewScan(scan.scan_id)">
             View Details
@@ -160,8 +174,36 @@ h2 {
 .scan-url {
   color: #2c3e50;
   font-weight: 500;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
   word-break: break-all;
+}
+
+.scanner-progress {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.scanner-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.scanner-label {
+  font-size: 0.8rem;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.scanner-badge {
+  padding: 0.2rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .scan-actions {
