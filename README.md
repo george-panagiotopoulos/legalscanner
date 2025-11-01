@@ -6,10 +6,16 @@ A comprehensive tool to scan Git repositories for legal and compliance issues, i
 
 - **License Detection**: Identify all open source licenses using multiple scanners (Nomos, Monk, Ojo)
 - **Copyright Detection**: Extract all copyright statements, holders, and years
-- **Export Control & Security Analysis**: Detect cryptographic implementations and export control-relevant code patterns using Semgrep
+- **Export Control Classification (ECC)**: Automated detection of cryptographic implementations and export control-relevant code patterns
+  - Symmetric encryption algorithms (AES, DES, ChaCha20, etc.)
+  - Asymmetric encryption algorithms (RSA, ECC, DSA, etc.)
+  - Key generation and key derivation functions
+  - Digital signatures and hashing algorithms
+  - Secure communication protocols (TLS, SSL, SSH)
+  - Severity classification (high/medium/low) for compliance risk assessment
 - **Private Repository Support**: Scan private repositories with GitHub Personal Access Tokens
 - **REST API**: Programmatic access for automation and CI/CD integration
-- **Web UI**: User-friendly interface with real-time scan monitoring
+- **Web UI**: User-friendly interface with real-time scan monitoring and filtering
 - **Extensible Architecture**: Plugin system for adding new scanners
 - **Docker-based**: One-command deployment with Docker Compose
 - **SPDX Mapping**: Automatic mapping to SPDX license identifiers
@@ -80,7 +86,8 @@ docker-compose ps
    - Paste the token in the "Git Access Token (Optional)" field
 5. Click "Start Scan"
 6. Monitor scan progress in real-time
-7. View detailed results with licenses and copyrights per file
+7. View detailed results with licenses, copyrights, and security findings per file
+8. Filter results by scanner type (Fossology/Semgrep) and result category
 
 ### Via REST API
 
@@ -161,7 +168,8 @@ Response:
         "file_path": "src/main.rs",
         "license": "MIT License",
         "spdx_id": "MIT",
-        "confidence": 0.98
+        "confidence": 0.98,
+        "scanner": "fossology"
       }
     ],
     "copyrights": [
@@ -169,7 +177,30 @@ Response:
         "file_path": "src/main.rs",
         "statement": "Copyright (c) 2025 John Doe",
         "holders": ["John Doe"],
-        "years": ["2025"]
+        "years": ["2025"],
+        "scanner": "fossology"
+      }
+    ],
+    "security": [
+      {
+        "file_path": "src/crypto.rs",
+        "finding_type": "symmetric_encryption",
+        "description": "AES-256 encryption implementation detected",
+        "ecc_category": "5A002",
+        "severity": "high",
+        "line_number": 42,
+        "code_snippet": "cipher = Aes256::new(&key)",
+        "scanner": "semgrep"
+      },
+      {
+        "file_path": "src/auth.rs",
+        "finding_type": "asymmetric_encryption",
+        "description": "RSA key generation detected",
+        "ecc_category": "5A002",
+        "severity": "high",
+        "line_number": 15,
+        "code_snippet": "let rsa = Rsa::generate(2048)",
+        "scanner": "semgrep"
       }
     ]
   }
@@ -454,28 +485,35 @@ For high-load production environments:
 
 ## Roadmap
 
-### Phase 1 (Current)
+### Phase 1 (Completed)
 - ✅ License detection (Nomos, Monk, Ojo)
 - ✅ Copyright detection
 - ✅ Private repository support
 - ✅ REST API
 - ✅ Web UI
 - ✅ SPDX mapping
+- ✅ Export Control Classification (ECC) scanning with Semgrep
+- ✅ Cryptographic pattern detection (symmetric/asymmetric encryption, key generation, hashing)
+- ✅ Severity classification for compliance risk assessment
+- ✅ Parallel scanning architecture (Fossology + Semgrep)
+- ✅ Results filtering by scanner and result type
 
-### Phase 2 (Planned)
-- [ ] Export Control Classification (ECC) scanning
+### Phase 2 (In Progress)
 - [ ] Keyword detection (patents, trademarks, confidential markers)
 - [ ] License compatibility analysis
 - [ ] SPDX/SBOM export
-- [ ] Enhanced reporting with risk severity
+- [ ] Enhanced PDF/HTML reporting
+- [ ] Custom Semgrep rule management via UI
 
 ### Phase 3 (Future)
 - [ ] Additional scanners (ScanCode, Black Duck)
 - [ ] CVE/security vulnerability scanning
-- [ ] Webhook notifications
-- [ ] Scheduled scans
-- [ ] CI/CD integration plugins
+- [ ] Webhook notifications for scan completion
+- [ ] Scheduled/recurring scans
+- [ ] CI/CD integration plugins (GitHub Actions, GitLab CI)
 - [ ] Multi-tenancy and user management
+- [ ] Advanced ECC classification with ECCN determination
+- [ ] Integration with export control compliance platforms
 
 ## Contributing
 
