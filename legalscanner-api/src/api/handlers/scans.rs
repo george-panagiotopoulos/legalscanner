@@ -1,5 +1,5 @@
 use crate::{
-    api::models::{CreateScanRequest, ScanResponse, ScanResultsResponse},
+    api::models::{CreateScanRequest, RiskAssessment, RiskFactor, ScanResponse, ScanResultsResponse},
     db::models::{Scan, ScanResult},
     error::AppError,
     AppState,
@@ -45,6 +45,8 @@ pub async fn create_scan(
             git_url: scan.git_url,
             fossology_status: scan.fossology_status,
             semgrep_status: scan.semgrep_status,
+            risk_score: scan.risk_score,
+            risk_level: scan.risk_level,
         }),
     ))
 }
@@ -64,6 +66,8 @@ pub async fn list_scans(
             git_url: scan.git_url,
             fossology_status: scan.fossology_status,
             semgrep_status: scan.semgrep_status,
+            risk_score: scan.risk_score,
+            risk_level: scan.risk_level,
         })
         .collect();
 
@@ -81,8 +85,27 @@ pub async fn get_scan(
 
     let summary = Scan::get_summary(&state.db, &id).await.ok();
 
+    // Parse risk factors if present
+    let risk_assessment = if let (Some(score), Some(level), Some(factors_json)) =
+        (&scan.risk_score, &scan.risk_level, &scan.risk_factors)
+    {
+        match serde_json::from_str::<Vec<RiskFactor>>(factors_json) {
+            Ok(factors) => Some(RiskAssessment {
+                score: *score,
+                level: level.clone(),
+                factors,
+            }),
+            Err(e) => {
+                tracing::error!("Failed to parse risk factors: {}", e);
+                None
+            }
+        }
+    } else {
+        None
+    };
+
     Ok(Json(serde_json::json!({
-        "id": scan.id,
+        "scan_id": scan.id,
         "git_url": scan.git_url,
         "status": scan.status,
         "error_message": scan.error_message,
@@ -93,7 +116,8 @@ pub async fn get_scan(
         "semgrep_status": scan.semgrep_status,
         "fossology_error": scan.fossology_error,
         "semgrep_error": scan.semgrep_error,
-        "summary": summary
+        "summary": summary,
+        "risk_assessment": risk_assessment
     })))
 }
 

@@ -25,6 +25,10 @@ pub struct Scan {
     pub semgrep_completed_at: Option<String>,
     pub fossology_error: Option<String>,
     pub semgrep_error: Option<String>,
+    // Risk scoring fields
+    pub risk_score: Option<i32>,
+    pub risk_level: Option<String>,
+    pub risk_factors: Option<String>, // JSON array
 }
 
 impl Scan {
@@ -195,6 +199,33 @@ impl Scan {
             WHERE id = ?
             "#,
         )
+        .bind(id)
+        .execute(pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// Update risk assessment for a scan
+    pub async fn update_risk_assessment(
+        pool: &SqlitePool,
+        id: &str,
+        risk_score: i32,
+        risk_level: &str,
+        risk_factors_json: &str,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            r#"
+            UPDATE scans
+            SET risk_score = ?,
+                risk_level = ?,
+                risk_factors = ?
+            WHERE id = ?
+            "#,
+        )
+        .bind(risk_score)
+        .bind(risk_level)
+        .bind(risk_factors_json)
         .bind(id)
         .execute(pool)
         .await?;

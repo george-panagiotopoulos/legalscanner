@@ -42,6 +42,12 @@
             </span>
           </div>
         </div>
+        <div v-if="scan.risk_score !== null && scan.risk_score !== undefined" class="risk-display">
+          <span class="risk-label">Risk:</span>
+          <span class="risk-badge" :class="`risk-${scan.risk_level}`">
+            {{ scan.risk_score }}% ({{ formatRiskLevel(scan.risk_level) }})
+          </span>
+        </div>
         <div class="scan-actions">
           <button class="btn-small btn-view" @click.stop="viewScan(scan.scan_id)">
             View Details
@@ -81,6 +87,16 @@ const formatStatus = (status) => {
 const formatDate = (dateString) => {
   const date = new Date(dateString)
   return date.toLocaleString()
+}
+
+const formatRiskLevel = (level) => {
+  const levelMap = {
+    low: 'Low',
+    medium: 'Medium',
+    high: 'High',
+    critical: 'Critical'
+  }
+  return levelMap[level] || level
 }
 </script>
 
@@ -204,6 +220,64 @@ h2 {
   border-radius: 10px;
   font-size: 0.75rem;
   font-weight: 500;
+}
+
+.risk-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.risk-label {
+  font-size: 0.9rem;
+  color: #495057;
+  font-weight: 600;
+}
+
+.risk-badge {
+  padding: 0.35rem 0.85rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.risk-low {
+  background-color: #d1e7dd;
+  color: #0f5132;
+  border: 1px solid #a3cfbb;
+}
+
+.risk-medium {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffe69c;
+}
+
+.risk-high {
+  background-color: #ffd6a5;
+  color: #8b4513;
+  border: 1px solid #ffb347;
+}
+
+.risk-critical {
+  background-color: #f8d7da;
+  color: #842029;
+  border: 1px solid #f5c2c7;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(220, 53, 69, 0);
+  }
 }
 
 .scan-actions {

@@ -1,27 +1,10 @@
-mod api;
-mod config;
-mod db;
-mod error;
-mod export;
-mod git;
-mod scanner;
-mod utils;
-
-use crate::config::Config;
-use crate::error::AppError;
-use crate::scanner::fossology::FossologyScanner;
-use crate::scanner::semgrep::SemgrepScanner;
-use crate::scanner::Scanner;
+use legalscanner_api::AppState;
+use legalscanner_api::config::Config;
+use legalscanner_api::scanner::fossology::FossologyScanner;
+use legalscanner_api::scanner::semgrep::SemgrepScanner;
+use legalscanner_api::{api, db, git};
 use std::sync::Arc;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-
-#[derive(Clone)]
-pub struct AppState {
-    pub db: sqlx::SqlitePool,
-    pub config: Arc<Config>,
-    pub fossology_scanner: Arc<dyn Scanner>,
-    pub semgrep_scanner: Arc<dyn Scanner>,
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

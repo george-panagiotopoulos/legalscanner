@@ -1,4 +1,5 @@
 use crate::{
+    api::handlers::risk::calculate_risk_score,
     db::models::{Scan, ScanResult as DbScanResult},
     git::{clone_repository, workspace::Workspace},
     scanner::Scanner,
@@ -128,6 +129,41 @@ async fn execute_scan_internal(
         // 6. Update overall status to completed (should already be set by individual scanners)
         Scan::update_overall_status(&state.db, &scan_id).await?;
         tracing::info!("Scan status updated to completed");
+
+        // 7. Calculate and store risk assessment
+        tracing::info!("Calculating risk assessment for scan {}", scan_id);
+        match calculate_risk_score(&state.db, &scan_id).await {
+            Ok(risk_assessment) => {
+                tracing::info!(
+                    "Risk assessment calculated: score={}, level={}",
+                    risk_assessment.score,
+                    risk_assessment.level
+                );
+
+                // Serialize risk factors to JSON
+                let risk_factors_json = serde_json::to_string(&risk_assessment.factors)
+                    .unwrap_or_else(|_| "[]".to_string());
+
+                // Update scan with risk assessment
+                if let Err(e) = Scan::update_risk_assessment(
+                    &state.db,
+                    &scan_id,
+                    risk_assessment.score,
+                    &risk_assessment.level,
+                    &risk_factors_json,
+                )
+                .await
+                {
+                    tracing::error!("Failed to store risk assessment: {}", e);
+                } else {
+                    tracing::info!("Risk assessment stored successfully");
+                }
+            }
+            Err(e) => {
+                tracing::error!("Failed to calculate risk assessment: {}", e);
+                // Don't fail the entire scan if risk calculation fails
+            }
+        }
 
         Ok::<(), Box<dyn std::error::Error + Send + Sync>>(())
     }

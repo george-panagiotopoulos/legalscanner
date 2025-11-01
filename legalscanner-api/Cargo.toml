@@ -6,6 +6,10 @@ authors.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[lib]
+name = "legalscanner_api"
+path = "src/lib.rs"
+
 [dependencies]
 # Async runtime
 tokio = { workspace = true }
