@@ -1,6 +1,16 @@
 <template>
   <div class="results-viewer">
-    <h2>Scan Results</h2>
+    <div class="header">
+      <h2>Scan Results</h2>
+      <div class="export-actions">
+        <button class="btn-export" @click="exportSbom('json')" :disabled="!results">
+          Export SBOM (JSON)
+        </button>
+        <button class="btn-export" @click="exportSbom('yaml')" :disabled="!results">
+          Export SBOM (YAML)
+        </button>
+      </div>
+    </div>
 
     <div v-if="loading" class="loading">Loading results...</div>
 
@@ -166,6 +176,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useScansStore } from '@/store/scans'
+import { exportSbom as exportSbomApi } from '@/api/scans'
 
 const props = defineProps({
   scanId: {
@@ -207,6 +218,38 @@ const copyToClipboard = () => {
     alert('JSON copied to clipboard!')
   })
 }
+
+const exportSbom = async (format) => {
+  try {
+    const response = await exportSbomApi(props.scanId, format)
+
+    // Extract filename from Content-Disposition header or create default
+    const contentDisposition = response.headers['content-disposition']
+    let filename = `sbom.spdx.${format}`
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="?(.+)"?/)
+      if (filenameMatch) {
+        filename = filenameMatch[1]
+      }
+    }
+
+    // Create blob and download
+    const blob = new Blob([response.data], {
+      type: response.headers['content-type']
+    })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  } catch (err) {
+    console.error('Failed to export SBOM:', err)
+    alert(`Failed to export SBOM: ${err.message}`)
+  }
+}
 </script>
 
 <style scoped>
@@ -217,9 +260,43 @@ const copyToClipboard = () => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
 h2 {
   color: #2c3e50;
-  margin-bottom: 1.5rem;
+  margin: 0;
+}
+
+.export-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-export {
+  padding: 0.5rem 1rem;
+  background-color: #27ae60;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background-color 0.3s;
+}
+
+.btn-export:hover:not(:disabled) {
+  background-color: #229954;
+}
+
+.btn-export:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .loading {

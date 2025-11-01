@@ -57,5 +57,8 @@ chrono = { workspace = true }
 # Regex
 regex = { workspace = true }
 
+# SPDX/SBOM export
+serde_yaml = { workspace = true }
+
 [dev-dependencies]
 http-body-util = "0.1"

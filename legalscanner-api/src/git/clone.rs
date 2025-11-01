@@ -23,13 +23,12 @@ pub async fn clone_repository(url: &str, destination: &Path, token: Option<&str>
             tracing::info!("Using authentication token for git clone");
 
             // Setup authentication callbacks
+            // For GitHub PATs, use the token as username with empty password
+            // This is the correct authentication method for HTTPS GitHub clones with PAT
             let mut callbacks = RemoteCallbacks::new();
-            callbacks.credentials(|_url, username_from_url, _allowed_types| {
+            callbacks.credentials(move |_url, _username_from_url, _allowed_types| {
                 tracing::debug!("Git credentials callback invoked");
-                git2::Cred::userpass_plaintext(
-                    username_from_url.unwrap_or("git"),
-                    &token
-                )
+                git2::Cred::userpass_plaintext(&token, "")
             });
 
             // Setup fetch options with callbacks

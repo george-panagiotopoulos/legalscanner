@@ -22,6 +22,10 @@ pub fn create_router(state: AppState) -> Router {
             "/api/v1/scans/:id/results",
             get(handlers::scans::get_scan_results),
         )
+        .route(
+            "/api/v1/scans/:id/sbom",
+            get(handlers::sbom::get_scan_sbom),
+        )
 
         // API Keys
         .route("/api/v1/api-keys", post(handlers::api_keys::create_api_key))

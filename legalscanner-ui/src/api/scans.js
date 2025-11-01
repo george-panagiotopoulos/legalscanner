@@ -32,3 +32,11 @@ export const deleteAllScans = async () => {
   const response = await client.delete('/api/v1/scans')
   return response.data
 }
+
+export const exportSbom = async (scanId, format = 'json') => {
+  const response = await client.get(`/api/v1/scans/${scanId}/sbom`, {
+    params: { format },
+    responseType: 'blob'
+  })
+  return response
+}
